@@ -603,7 +603,7 @@ export default function ChatPage() {
       <Cursor />
 
       {/* TOP BAR */}
-      <div style={{
+      <div className="chat-topbar" style={{
         height:52, flexShrink:0,
         display:'flex', alignItems:'center', justifyContent:'space-between',
         padding:'0 1.5rem',
@@ -641,6 +641,7 @@ export default function ChatPage() {
           borderRight:'1px solid var(--border)',
           overflow:'hidden',
           background:'var(--bg)',
+          minHeight: 0,
         }}>
           <MatrixRain />
           <FigureResponsive />

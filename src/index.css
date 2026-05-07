@@ -632,3 +632,69 @@ textarea { resize: vertical; min-height: 80px; }
     padding: 4px 10px !important;
   }
 }
+
+/* ── CHAT MOBILE FIX ──────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Chat page full height */
+  .chat-layout {
+    flex-direction: column !important;
+    height: calc(100vh - 52px) !important;
+    overflow: hidden !important;
+  }
+
+  /* Figure panel — pequeño arriba */
+  .chat-figure-panel {
+    width: 100% !important;
+    height: 200px !important;
+    min-height: 200px !important;
+    max-height: 200px !important;
+    flex-shrink: 0 !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+  }
+
+  /* Chat panel — ocupa todo el resto */
+  .chat-interact-panel {
+    flex: 1 !important;
+    min-height: 0 !important;
+    height: 0 !important;
+    display: flex !important;
+    flex-direction: column !important;
+    overflow: hidden !important;
+  }
+
+  /* Tabs más pequeños */
+  .chat-interact-panel button {
+    font-size: 10px !important;
+    padding: 6px 8px !important;
+  }
+
+  /* Input area fija abajo */
+  .chat-interact-panel > div:last-child {
+    flex-shrink: 0 !important;
+  }
+
+  /* Mensajes scrollables */
+  .chat-interact-panel > div > div[style*="overflow-y"] {
+    flex: 1 !important;
+    min-height: 0 !important;
+  }
+
+  /* Top bar chat en móvil */
+  .chat-topbar {
+    padding: 0 0.75rem !important;
+  }
+  .chat-topbar span {
+    font-size: 9px !important;
+  }
+
+  /* Ocultar "POWERED BY GEMMA 4" en móvil */
+  .chat-topbar > span:last-child {
+    display: none !important;
+  }
+
+  /* Figura más pequeña en panel reducido */
+  .chat-figure-panel canvas {
+    height: 200px !important;
+  }
+}
