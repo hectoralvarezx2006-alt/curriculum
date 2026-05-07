@@ -565,3 +565,70 @@ textarea { resize: vertical; min-height: 80px; }
   .nav-desktop    { display: none !important; }
   .nav-hamburger  { display: flex !important; }
 }
+
+/* ── MOBILE FIXES ─────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Fix glitch overflow */
+  .glitch, .glitch::before, .glitch::after {
+    max-width: 100%;
+    overflow: hidden;
+  }
+  .glitch::before, .glitch::after {
+    display: none;
+  }
+
+  /* Hero padding */
+  #hero {
+    padding: 80px 1.25rem 3rem !important;
+    overflow-x: hidden;
+  }
+
+  /* Hide custom cursor on mobile */
+  #cursor, #cursor-ring { display: none !important; }
+  html, body, * { cursor: auto !important; }
+
+  /* Chat page mobile - stack vertically */
+  .chat-layout {
+    flex-direction: column !important;
+    overflow-y: auto !important;
+  }
+  .chat-figure-panel {
+    width: 100% !important;
+    height: 350px !important;
+    border-right: none !important;
+    border-bottom: 1px solid var(--border) !important;
+    flex-shrink: 0 !important;
+  }
+  .chat-interact-panel {
+    flex: 1 !important;
+    min-height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Nav top bar chat */
+  .chat-topbar-center {
+    font-size: 10px !important;
+  }
+
+  /* Section padding */
+  section.section {
+    padding-left: 1.25rem !important;
+    padding-right: 1.25rem !important;
+  }
+
+  /* Buttons */
+  .btn-cyber {
+    padding: 10px 16px !important;
+    font-size: 12px !important;
+  }
+}
+
+@media (max-width: 480px) {
+  h2.section-title {
+    font-size: 1.6rem !important;
+  }
+  .skill-chip {
+    font-size: 11px !important;
+    padding: 4px 10px !important;
+  }
+}

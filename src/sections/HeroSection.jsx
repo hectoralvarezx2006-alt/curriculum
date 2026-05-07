@@ -200,11 +200,13 @@ export default function HeroSection({ started }) {
           data-text="Héctor Álvarez."
           style={{
             fontFamily: 'var(--font-sans)',
-            fontSize: 'clamp(3.2rem, 7vw, 6rem)',
+            fontSize: 'clamp(2.2rem, 6vw, 6rem)',
             fontWeight: 800,
             letterSpacing: '-0.03em',
             lineHeight: 1.05,
             marginBottom: '0.25em',
+            overflowWrap: 'break-word',
+            wordBreak: 'break-word',
           }}
         >
           {words.map((w, i) => (

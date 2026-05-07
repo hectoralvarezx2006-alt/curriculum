@@ -7,7 +7,11 @@ export default function Cursor() {
   const ringPos   = useRef({ x: 0, y: 0 })
   const raf       = useRef(null)
 
+  // Don't show custom cursor on touch devices
+  const isTouch = 'ontouchstart' in window
+  
   useEffect(() => {
+    if (isTouch) return
     const onMove = (e) => {
       pos.current = { x: e.clientX, y: e.clientY }
       if (cursorRef.current) {
