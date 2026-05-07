@@ -698,3 +698,13 @@ textarea { resize: vertical; min-height: 80px; }
     height: 200px !important;
   }
 }
+
+/* ── CURSOR FIX MOBILE ────────────────────────────────── */
+@media (hover: none), (pointer: coarse) {
+  html, body { cursor: auto !important; }
+  *, *::before, *::after { cursor: auto !important; }
+  a, button, [data-hover], input, textarea, select {
+    cursor: pointer !important;
+  }
+  #cursor, #cursor-ring { display: none !important; }
+}

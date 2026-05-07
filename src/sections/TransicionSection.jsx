@@ -120,14 +120,14 @@ export default function TransicionSection() {
           style={{ display: 'flex', gap: 14, justifyContent: 'center', flexWrap: 'wrap' }}
         >
           {/* Main CTA → /chat */}
-          <a href="/chat">
-            <motion.button
-              whileHover={{ boxShadow: 'var(--glow-purple)' }}
+          <a href="/chat" style={{ textDecoration:'none' }}>
+            <button
               className="btn-cyber"
-              style={{ fontSize: '1rem', padding: '14px 40px' }}
+              style={{ fontSize: '1rem', padding: '14px 40px', cursor: 'pointer' }}
+              onClick={() => { window.location.href = '/chat' }}
             >
               abrir chat con héctor →
-            </motion.button>
+            </button>
           </a>
           <a href="#interactuar">
             <button className="btn-cyber btn-cyber-green" style={{ fontSize: '0.9rem', padding: '12px 24px' }}>
