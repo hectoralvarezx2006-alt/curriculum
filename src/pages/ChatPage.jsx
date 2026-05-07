@@ -330,7 +330,7 @@ function ChatMode({ onLoadingChange }) {
         ],
         generationConfig: { maxOutputTokens: 800, temperature: 0.75 }
       })
-      const gemmaURL = `https://generativelanguage.googleapis.com/v1beta/models/gemma-4-26b-a4b-it:generateContent?key=${API_KEY}`
+      const gemmaURL = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${API_KEY}`
 
       let data
       for (let attempt = 0; attempt < 3; attempt++) {
