@@ -3,6 +3,7 @@ import Figure3D from '../components/Figure3D.jsx'
 import { useWindowSize } from '../hooks/useWindowSize.js'
 import { motion, AnimatePresence } from 'framer-motion'
 import { SYSTEM_PROMPT, THINK_STEPS } from '../data/index.js'
+import DebugChallenge from '../components/DebugChallenge.jsx'
 import Cursor from '../components/Cursor.jsx'
 
 /* ══════════════════════════════════════════════════════════

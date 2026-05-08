@@ -5,6 +5,15 @@ import './index.css'
 window.scrollTo(0, 0)
 history.scrollRestoration = 'manual'
 
+// Global audio that persists across page navigations
+window.__audio = window.__audio || (() => {
+  const a = new Audio('/music.mp3')
+  a.loop   = true
+  a.volume = 0.18
+  a.play().catch(() => {})
+  return a
+})()
+
 const path = window.location.pathname
 
 async function init() {
