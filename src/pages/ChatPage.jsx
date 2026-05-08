@@ -481,60 +481,7 @@ function ChatMode({ onLoadingChange }) {
    DEBUG MODE
 ══════════════════════════════════════════════════════════ */
 function DebugMode() {
-  const [answer,   setAnswer]   = useState('')
-  const [revealed, setRevealed] = useState(false)
-
-  return (
-    <div style={{ padding:'1.25rem', overflowY:'auto', height:'100%', color:'var(--text)' }}>
-      <p style={{ fontSize:13, color:'var(--muted2)', marginBottom:'1rem', lineHeight:1.7 }}>
-        Bug real de mi proyecto de presupuestos. ¿Puedes encontrar qué falla?
-      </p>
-      <div className="code-block" style={{ marginBottom:'1rem', fontSize:12 }}>
-<span className="ck">def</span> <span className="cf">procesar_gasto</span>(texto, categorias):
-    respuesta = llamar_openai(texto)
-    datos     = json.loads(respuesta)
-    categoria = datos[<span className="cs">"categoria"</span>]
-    importe   = datos[<span className="cs">"importe"</span>]
-
-    <span className="ck">if</span> categoria <span className="ck">in</span> categorias: <span className="ch"><span className="cc"> ← falla a veces</span></span>
-        guardar_en_bd(categoria, importe)
-        <span className="ck">return</span> <span className="cs">"Guardado"</span>
-    <span className="ck">else</span>:
-        <span className="ck">return</span> <span className="cs">"Categoría no reconocida"</span>
-      </div>
-      <div style={{ fontWeight:600, fontSize:13.5, color:'var(--text)', marginBottom:8 }}>
-        ¿Qué crees que falla? ¿Cómo lo arreglarías?
-      </div>
-      <textarea
-        value={answer}
-        onChange={e => setAnswer(e.target.value)}
-        placeholder="Escribe tu diagnóstico..."
-        style={{ marginBottom:10, fontSize:12, minHeight:72, width:'100%' }}
-      />
-      <button
-        onClick={() => { if (answer.trim()) setRevealed(true) }}
-        className="btn-cyber"
-        style={{ fontSize:12, padding:'8px 18px' }}
-      >
-        ver diagnóstico real
-      </button>
-      <AnimatePresence>
-        {revealed && (
-          <motion.div initial={{ opacity:0, y:10 }} animate={{ opacity:1, y:0 }}
-            style={{ marginTop:'1rem', padding:'1rem', background:'rgba(16,185,129,0.05)', border:'1px solid rgba(16,185,129,0.2)' }}
-          >
-            <div style={{ fontFamily:'var(--font-mono)', fontSize:11, color:'var(--green2)', marginBottom:8 }}>✓ lo que encontré yo:</div>
-            <p style={{ fontSize:13, color:'var(--muted2)', lineHeight:1.7, marginBottom:6 }}>
-              La IA devuelve <code style={{color:'var(--purple2)'}}>{"\"Gasolina\""}</code> pero mis categorías tienen <code style={{color:'var(--purple2)'}}>{"\"gasolina\""}</code>. El <code style={{color:'var(--purple2)'}}>in</code> de Python falla por diferencia de mayúsculas.
-            </p>
-            <p style={{ fontSize:12, color:'var(--green2)', fontStyle:'italic' }}>
-              Fix: <code>categoria.strip().lower()</code> antes de comparar.
-            </p>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </div>
-  )
+  return <DebugChallenge />
 }
 
 /* ══════════════════════════════════════════════════════════
