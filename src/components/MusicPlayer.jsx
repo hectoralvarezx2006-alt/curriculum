@@ -1,80 +1,54 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useEffect, useRef } from 'react'
 import { motion } from 'framer-motion'
 
-const TRACK_URL = 'https://files.freemusicarchive.org/storage-freemusicarchive-org/music/no_curator/Kai_Engel/Satin/Kai_Engel_-_01_-_Satin.mp3'
+const TRACK_URL = '/music.mp3'
 
 export default function MusicPlayer() {
-  const audioRef = useRef(null)
-  const [playing, setPlaying] = useState(false)
-  const [muted,   setMuted]   = useState(false)
+  const [on, setOn] = useState(false)
+  const audio = useRef(null)
 
   useEffect(() => {
-    const audio  = new Audio(TRACK_URL)
-    audio.loop   = true
-    audio.volume = 0.18
-    audioRef.current = audio
-
-    // Try autoplay on desktop
-    audio.play().then(() => setPlaying(true)).catch(() => {})
-
-    return () => { audio.pause(); audio.src = '' }
+    audio.current = new Audio(TRACK_URL)
+    audio.current.loop   = true
+    audio.current.volume = 0.2
+    // Try autoplay desktop
+    audio.current.play().then(() => setOn(true)).catch(() => {})
+    return () => { audio.current.pause(); audio.current.src = '' }
   }, [])
 
-  const handleClick = () => {
-    const audio = audioRef.current
-    if (!audio) return
-
-    if (!playing) {
-      audio.play().then(() => { setPlaying(true); setMuted(false) }).catch(() => {})
-      return
-    }
-    if (muted) {
-      audio.volume = 0.18
-      setMuted(false)
+  const toggle = () => {
+    if (!audio.current) return
+    if (on) {
+      audio.current.pause()
+      setOn(false)
     } else {
-      audio.volume = 0
-      setMuted(true)
+      audio.current.play().then(() => setOn(true)).catch(e => console.log('audio error:', e))
     }
   }
 
   return (
-    <motion.div
+    <motion.button
+      onClick={toggle}
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
-      transition={{ delay: 4 }}
+      transition={{ delay: 3 }}
+      title={on ? 'Silenciar' : 'Activar música'}
       style={{
         position: 'fixed', bottom: '1.5rem', right: '1.5rem',
-        zIndex: 400, display: 'flex', alignItems: 'center', gap: 8,
+        zIndex: 9000,
+        width: 42, height: 42, borderRadius: '50%',
+        background: 'rgba(5,5,7,0.95)',
+        border: `1.5px solid ${on ? 'var(--purple)' : 'var(--border)'}`,
+        fontSize: 18,
+        display: 'flex', alignItems: 'center', justifyContent: 'center',
+        cursor: 'pointer',
+        boxShadow: on ? '0 0 16px rgba(139,92,246,0.4)' : 'none',
+        transition: 'all 0.2s',
+        WebkitTapHighlightColor: 'transparent',
+        touchAction: 'manipulation',
       }}
     >
-      {playing && !muted && (
-        <div style={{ display: 'flex', gap: 2, alignItems: 'flex-end', height: 14 }}>
-          {[0,1,2,3].map(i => (
-            <motion.div key={i}
-              animate={{ height: [3, 10, 3] }}
-              transition={{ duration: 0.5, repeat: Infinity, delay: i * 0.12 }}
-              style={{ width: 2, background: 'var(--purple)', borderRadius: 1 }}
-            />
-          ))}
-        </div>
-      )}
-      <button
-        onClick={handleClick}
-        style={{
-          width: 38, height: 38, borderRadius: '50%',
-          background: 'rgba(11,11,16,0.95)',
-          border: `1px solid ${playing && !muted ? 'var(--purple)' : 'var(--border)'}`,
-          color: playing && !muted ? 'var(--purple2)' : 'var(--muted)',
-          cursor: 'pointer',
-          display: 'flex', alignItems: 'center', justifyContent: 'center',
-          fontSize: 16,
-          boxShadow: playing && !muted ? '0 0 12px rgba(139,92,246,0.3)' : 'none',
-          transition: 'all 0.2s',
-          WebkitTapHighlightColor: 'transparent',
-        }}
-      >
-        {playing && !muted ? '🎵' : '🔇'}
-      </button>
-    </motion.div>
+      {on ? '🎵' : '🔇'}
+    </motion.button>
   )
 }
