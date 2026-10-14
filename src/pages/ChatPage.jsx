@@ -1,9 +1,8 @@
 import { useState, useRef, useEffect, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import HoloFace from '../components/HoloFace.jsx'
-import DebugChallenge from '../components/DebugChallenge.jsx'
 import Cursor from '../components/Cursor.jsx'
-import { SYSTEM_PROMPT, THINK_STEPS } from '../data/index.js'
+import { SYSTEM_PROMPT } from '../data/index.js'
 
 /* ══════════════════════════════════════════════════════════
    TEMA (cambia aquí los colores del chat)
@@ -21,6 +20,10 @@ const T = {
 const SANS = "'Inter', var(--font-sans), system-ui, sans-serif"
 const MONO = 'var(--font-mono)'
 
+// Reconocimiento de voz del navegador (Chrome, Edge, Safari…). En Firefox no existe.
+const SpeechRec =
+  typeof window !== 'undefined' ? window.SpeechRecognition || window.webkitSpeechRecognition : null
+
 const GREETING =
   'Hola, soy el asistente de Héctor. Puedo responderte sobre su experiencia, proyectos o forma de trabajar. ¿Qué quieres saber?'
 
@@ -33,8 +36,6 @@ const QUICK_QS = [
 ]
 
 const PANELS = {
-  debug:   'Debug challenge',
-  think:   'Cómo pienso',
   history: 'Historial',
 }
 
@@ -42,6 +43,11 @@ const css = `
   .holo-root { height: 100vh; }
   @supports (height: 100dvh) { .holo-root { height: 100dvh; } }
   @keyframes holo-eq { 0%,100% { transform: scaleY(.3); } 50% { transform: scaleY(1); } }
+  @keyframes holo-live {
+    0%,100% { box-shadow: 0 0 0 0 rgba(239,68,68,.55), 0 0 16px rgba(239,68,68,.45); }
+    50%     { box-shadow: 0 0 0 9px rgba(239,68,68,0), 0 0 22px rgba(239,68,68,.6); }
+  }
+  .holo-live { animation: holo-live 1.4s ease-out infinite; }
   .holo-eq i { display:block; width:3px; height:16px; border-radius:2px; background:#fff; transform: scaleY(.3); transform-origin:center; }
   .holo-eq.on i { animation: holo-eq .9s ease-in-out infinite; }
   .holo-eq i:nth-child(1) { animation-delay: 0s; }
@@ -111,39 +117,8 @@ function useTypewriter(text, id, cps = 45) {
 }
 
 /* ══════════════════════════════════════════════════════════
-   PANELES (debug / cómo pienso / historial)
+   PANELES (historial)
 ══════════════════════════════════════════════════════════ */
-function ThinkMode() {
-  return (
-    <div style={{ padding: '1.25rem', overflowY: 'auto', height: '100%' }}>
-      <p style={{ fontSize: 13, color: 'var(--muted2)', marginBottom: '1.5rem', lineHeight: 1.7 }}>
-        Mi proceso cuando me enfrento a un problema:
-      </p>
-      {THINK_STEPS.map((step, i) => (
-        <motion.div key={step.num}
-          initial={{ opacity: 0, x: -16 }}
-          animate={{ opacity: 1, x: 0 }}
-          transition={{ duration: 0.5, delay: i * 0.1 }}
-          style={{ display: 'flex', gap: 14, alignItems: 'flex-start', marginBottom: '1.25rem' }}
-        >
-          <div style={{
-            flexShrink: 0, width: 36, height: 36,
-            background: 'rgba(59,130,246,0.1)',
-            border: '1px solid rgba(96,165,250,0.4)',
-            display: 'flex', alignItems: 'center', justifyContent: 'center',
-            fontFamily: MONO, fontSize: 11, color: T.accent2,
-          }}>{step.num}</div>
-          <div>
-            <div style={{ fontWeight: 600, fontSize: 13.5, color: 'var(--text)', marginBottom: 3 }}>{step.title}</div>
-            <p style={{ fontSize: 12.5, color: 'var(--muted2)', lineHeight: 1.7, marginBottom: 3 }}>{step.desc}</p>
-            <span style={{ fontFamily: MONO, fontSize: 10, color: 'var(--green2)' }}>{step.example}</span>
-          </div>
-        </motion.div>
-      ))}
-    </div>
-  )
-}
-
 function HistoryPanel({ msgs }) {
   const ref = useRef(null)
   useEffect(() => {
@@ -256,6 +231,83 @@ export default function ChatPage() {
   const hasText  = input.trim().length > 0
   const isTouch  = typeof window !== 'undefined' && 'ontouchstart' in window
 
+  /* ── Entrada por voz ─────────────────────────────────────── */
+  const [listening, setListening] = useState(false)
+  const [micMsg,    setMicMsg]    = useState('')
+  const recRef   = useRef(null)
+  const heardRef = useRef('')
+  const sendRef  = useRef(null)
+  const canMic   = !!SpeechRec
+
+  const cancelListening = useCallback(() => {
+    const r = recRef.current
+    recRef.current = null
+    heardRef.current = ''
+    setListening(false)
+    if (r) setInput('') // lo dictado se descarta; si no estaba escuchando, no toca lo escrito
+    try { r?.abort() } catch { /* ya estaba parado */ }
+  }, [])
+
+  const startListening = () => {
+    if (!SpeechRec || loading || recRef.current) return
+    if (typing) skip()
+    setMicMsg('')
+    const rec = new SpeechRec()
+    rec.lang = 'es-ES'
+    rec.interimResults = true
+    rec.continuous = false
+    rec.maxAlternatives = 1
+    heardRef.current = ''
+
+    rec.onresult = (e) => {
+      let text = ''
+      for (let i = 0; i < e.results.length; i++) text += e.results[i][0].transcript
+      heardRef.current = text.trim()
+      setInput(text)
+    }
+    rec.onerror = (e) => {
+      if (e.error === 'not-allowed' || e.error === 'service-not-allowed') {
+        setMicMsg('Permiso de micrófono denegado. Actívalo en el navegador para poder hablar.')
+      } else if (e.error === 'no-speech') {
+        setMicMsg('No te he oído. Prueba otra vez.')
+      } else if (e.error !== 'aborted') {
+        setMicMsg('No he podido usar el micrófono. Puedes escribir tu mensaje.')
+      }
+    }
+    rec.onend = () => {
+      const cancelled = recRef.current !== rec
+      recRef.current = null
+      setListening(false)
+      const text = heardRef.current
+      heardRef.current = ''
+      if (!cancelled && text) sendRef.current?.(text)
+    }
+
+    recRef.current = rec
+    setInput('')
+    setListening(true)
+    try {
+      rec.start()
+    } catch {
+      recRef.current = null
+      setListening(false)
+    }
+  }
+
+  const stopListening = () => {
+    try { recRef.current?.stop() } catch { /* ya estaba parado */ }
+  }
+
+  // Aviso de micrófono: desaparece solo
+  useEffect(() => {
+    if (!micMsg) return
+    const t = setTimeout(() => setMicMsg(''), 4500)
+    return () => clearTimeout(t)
+  }, [micMsg])
+
+  // Al salir de la página, corta el micrófono
+  useEffect(() => () => cancelListening(), [cancelListening])
+
   // Mantiene visible el final de la respuesta mientras se escribe
   useEffect(() => {
     if (replyRef.current) replyRef.current.scrollTop = replyRef.current.scrollHeight
@@ -267,10 +319,11 @@ export default function ChatPage() {
       if (e.key !== 'Escape') return
       setMenuOpen(false)
       setPanel(null)
+      cancelListening()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [])
+  }, [cancelListening])
 
   // Clic fuera cierra el menú "+"
   useEffect(() => {
@@ -347,6 +400,8 @@ export default function ChatPage() {
     if (!isTouch) inputRef.current?.focus()
   }
 
+  sendRef.current = send
+
   const openPanel = (key) => {
     setMenuOpen(false)
     setPanel(key)
@@ -354,11 +409,24 @@ export default function ChatPage() {
 
   const status = loading
     ? { label: 'PENSANDO', color: '#fbbf24' }
-    : speaking
-      ? { label: 'RESPONDIENDO', color: T.accent2 }
-      : { label: 'EN ESPERA', color: 'var(--green2)' }
+    : listening
+      ? { label: 'ESCUCHANDO', color: '#22d3ee' }
+      : speaking
+        ? { label: 'RESPONDIENDO', color: T.accent2 }
+        : { label: 'EN ESPERA', color: 'var(--green2)' }
 
   const showChips = msgs.length <= 1 && !loading
+
+  // Botón de la derecha: enviar (hay texto) · micrófono (vacío) · parar (escuchando)
+  const showSend = hasText && !listening
+  const micMode  = !showSend && canMic
+  const rightLabel = listening
+    ? 'Dejar de escuchar y enviar'
+    : showSend
+      ? 'Enviar mensaje'
+      : micMode
+        ? 'Hablar con el micrófono'
+        : 'Estado del asistente'
 
   return (
     <div className="holo-root" style={{
@@ -437,7 +505,7 @@ export default function ChatPage() {
 
         {/* Cara */}
         <div style={{ flex: '1 1 0', minHeight: 200, width: '100%', maxWidth: 820, position: 'relative' }}>
-          <HoloFace speaking={speaking} thinking={loading} />
+          <HoloFace speaking={speaking && !listening} thinking={loading} listening={listening} />
         </div>
 
         {/* Estado */}
@@ -541,6 +609,18 @@ export default function ChatPage() {
           width: '100%', maxWidth: 680, padding: '10px 1.25rem 0',
           position: 'relative', zIndex: 3, flexShrink: 0,
         }} ref={menuRef}>
+          {micMsg && (
+            <div role="alert" style={{
+              position: 'absolute', left: 0, right: 0, bottom: 'calc(100% - 4px)',
+              display: 'flex', justifyContent: 'center', padding: '0 1.25rem', pointerEvents: 'none',
+            }}>
+              <span style={{
+                fontFamily: SANS, fontSize: 12, color: '#fbbf24', textAlign: 'center',
+                background: 'rgba(4,6,15,0.9)', border: '1px solid rgba(251,191,36,0.3)',
+                borderRadius: 999, padding: '6px 14px',
+              }}>{micMsg}</span>
+            </div>
+          )}
           <AnimatePresence>
             {menuOpen && (
               <motion.div
@@ -557,8 +637,6 @@ export default function ChatPage() {
                 }}
               >
                 {[
-                  { key: 'debug',   title: 'Debug challenge', sub: 'Encuentra el bug y compáralo con mi razonamiento' },
-                  { key: 'think',   title: 'Cómo pienso',      sub: 'Mi proceso al enfrentarme a un problema' },
                   { key: 'history', title: 'Historial',        sub: 'Revisa la conversación completa' },
                 ].map((it) => (
                   <button key={it.key} type="button" role="menuitem"
@@ -611,9 +689,10 @@ export default function ChatPage() {
               className="holo-input"
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              placeholder="Escribe tu mensaje..."
+              placeholder={listening ? 'Te escucho…' : 'Escribe tu mensaje...'}
               aria-label="Escribe tu mensaje"
               disabled={loading}
+              readOnly={listening}
               autoFocus={!isTouch}
               autoComplete="off"
               maxLength={500}
@@ -625,23 +704,35 @@ export default function ChatPage() {
             />
 
             <button
-              type="submit"
-              aria-label={hasText ? 'Enviar mensaje' : 'Estado del asistente'}
+              type={micMode ? 'button' : 'submit'}
+              onClick={micMode ? (listening ? stopListening : startListening) : undefined}
+              disabled={micMode && loading}
+              aria-label={rightLabel}
+              aria-pressed={micMode ? listening : undefined}
+              className={listening ? 'holo-live' : undefined}
               style={{
                 width: 40, height: 40, borderRadius: '50%', flexShrink: 0,
-                background: `linear-gradient(135deg, ${T.accent}, #1d4ed8)`,
+                background: listening
+                  ? 'linear-gradient(135deg, #ef4444, #b91c1c)'
+                  : `linear-gradient(135deg, ${T.accent}, #1d4ed8)`,
                 border: 'none', color: '#fff', cursor: 'none',
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
-                boxShadow: '0 0 16px rgba(59,130,246,0.45)',
-                opacity: loading && !speaking ? 0.85 : 1,
+                boxShadow: listening ? undefined : '0 0 16px rgba(59,130,246,0.45)',
+                opacity: micMode && loading ? 0.5 : loading && !speaking ? 0.85 : 1,
+                transition: 'background .2s',
               }}
             >
-              {hasText ? (
+              {showSend ? (
                 <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
                   <path d="M8 13V3M3.5 7.5 8 3l4.5 4.5" stroke="currentColor" strokeWidth="1.9" strokeLinecap="round" strokeLinejoin="round" />
                 </svg>
+              ) : micMode && !listening ? (
+                <svg width="17" height="17" viewBox="0 0 16 16" fill="none">
+                  <rect x="5.5" y="1.5" width="5" height="8" rx="2.5" fill="currentColor" />
+                  <path d="M3 7.5a5 5 0 0 0 10 0M8 12.5V15" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                </svg>
               ) : (
-                <span className={`holo-eq ${speaking || loading ? 'on' : ''}`}
+                <span className={`holo-eq ${listening || speaking || loading ? 'on' : ''}`}
                   style={{ display: 'flex', alignItems: 'center', gap: 2.5, height: 16 }}>
                   <i /><i /><i /><i /><i />
                 </span>
@@ -703,8 +794,6 @@ export default function ChatPage() {
                 </div>
                 <div style={{ flex: 1, minHeight: 0, position: 'relative', overflow: 'hidden' }}>
                   <div style={{ position: 'absolute', inset: 0, display: 'flex', flexDirection: 'column' }}>
-                    {panel === 'debug'   && <DebugChallenge />}
-                    {panel === 'think'   && <ThinkMode />}
                     {panel === 'history' && <HistoryPanel msgs={msgs} />}
                   </div>
                 </div>

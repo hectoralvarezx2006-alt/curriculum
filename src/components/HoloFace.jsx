@@ -65,13 +65,13 @@ function glowTexture(rgb) {
   return new THREE.CanvasTexture(c)
 }
 
-export default function HoloFace({ speaking = false, thinking = false }) {
+export default function HoloFace({ speaking = false, thinking = false, listening = false }) {
   const mountRef = useRef(null)
-  const stateRef = useRef({ speaking, thinking })
+  const stateRef = useRef({ speaking, thinking, listening })
 
   useEffect(() => {
-    stateRef.current = { speaking, thinking }
-  }, [speaking, thinking])
+    stateRef.current = { speaking, thinking, listening }
+  }, [speaking, thinking, listening])
 
   useEffect(() => {
     const el = mountRef.current
@@ -457,9 +457,9 @@ export default function HoloFace({ speaking = false, thinking = false }) {
       raf = requestAnimationFrame(tick)
       const dt = Math.min(clock.getDelta(), 0.05)
       t += dt
-      const { speaking: sp, thinking: th } = stateRef.current
+      const { speaking: sp, thinking: th, listening: li } = stateRef.current
 
-      energy += ((sp ? 1 : th ? 0.6 : 0) - energy) * Math.min(1, dt * 4)
+      energy += ((sp ? 1 : th ? 0.6 : li ? 0.5 : 0) - energy) * Math.min(1, dt * 4)
       const motion = reduced ? 0.15 : 1
 
       // Boca: sílabas + énfasis + pausas de respiración
@@ -478,7 +478,8 @@ export default function HoloFace({ speaking = false, thinking = false }) {
       // Cabeza: sigue al ratón, respira y asiente al hablar
       const nod = sp ? Math.sin(t * 4.2) * 0.012 : 0
       const tY = (reduced ? 0 : mouse.x * 0.28 + Math.sin(t * 0.45) * 0.05) + (th ? -0.18 : 0)
-      const tX = (reduced ? 0 : mouse.y * 0.14 + Math.sin(t * 0.6) * 0.02) + (th ? -0.07 : 0) + nod
+      // Al escuchar, inclina un poco la cabeza hacia ti
+      const tX = (reduced ? 0 : mouse.y * 0.14 + Math.sin(t * 0.6) * 0.02) + (th ? -0.07 : 0) + (li ? 0.05 : 0) + nod
       head.rotation.y += (tY - head.rotation.y) * Math.min(1, dt * 3)
       head.rotation.x += (tX - head.rotation.x) * Math.min(1, dt * 3)
       head.scale.setScalar(1 + 0.006 * Math.sin(t * 1.6) * motion)
