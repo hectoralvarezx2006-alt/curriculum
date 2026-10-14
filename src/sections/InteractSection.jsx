@@ -6,7 +6,7 @@ import { THINK_STEPS, SYSTEM_PROMPT } from '../data/index.js'
 const QUICK_QS = [
   '¿Qué tecnologías conoces mejor?',
   '¿Por qué usaste IA en tus proyectos?',
-  '¿Qué tipo de trabajo buscas?',
+  '¿Qué haces en Altia?',
   '¿Cuál ha sido tu mayor aprendizaje?',
 ]
 

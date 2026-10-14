@@ -9,8 +9,8 @@ const LINES = [
   { type: 'out', text: 'Java, Flutter, Python, APIs, LLMs, SQL, Git' },
   { type: 'cmd', text: 'ls proyectos/' },
   { type: 'out', text: 'reproductor-musica/   app-presupuestos-ia/' },
-  { type: 'cmd', text: './disponible --primer-empleo' },
-  { type: 'out', text: 'Abierto a oportunidades · Listo para empezar ✓' },
+  { type: 'cmd', text: './estado --actual' },
+  { type: 'out', text: 'Programador en Altia · desde jun 2026 ✓' },
 ]
 
 function Particles() {
@@ -191,7 +191,7 @@ export default function HeroSection({ started }) {
           transition={{ duration: 0.6, delay: 0.05 }}
           className="section-eyebrow"
         >
-          recién graduado · dam 2025
+          programador junior · altia
         </motion.div>
 
         {/* Name — word by word, no parallax */}
@@ -278,7 +278,7 @@ export default function HeroSection({ started }) {
           style={{ display: 'flex', gap: 14, flexWrap: 'wrap' }}
         >
           <a href="#proyectos"><button className="btn-cyber">ver proyectos →</button></a>
-          <a href="#interactuar"><button className="btn-cyber btn-cyber-green">habla conmigo →</button></a>
+          <a href="/chat"><button className="btn-cyber btn-cyber-green">habla conmigo →</button></a>
         </motion.div>
       </div>
 

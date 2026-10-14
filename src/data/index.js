@@ -77,15 +77,21 @@ export const PROJECTS = [
 
 export const COMMITS = [
   {
+    date: 'Jun 2026 — Actualidad',
+    hash: 'c5d3e8',
+    msg: 'feat: programador junior en Altia (Barcelona)',
+    desc: 'Tras las prácticas me quedé en Altia como programador. Mi día a día es resolver tickets de aplicaciones: entender el fallo, encontrar la causa en código que no escribí yo y corregirlo sin romper nada más.'
+  },
+  {
     date: '2026 — DAM finalizado',
     hash: 'a3f92b',
-    msg: 'feat: graduación DAM + 415h de prácticas en Altia (Barcelona)',
+    msg: 'feat: graduación DAM + 515h de prácticas en Altia (Barcelona)',
     desc: 'Terminé DAM con prácticas reales en Altia. Trabajé en proyectos profesionales y aprendí cómo funciona el desarrollo en una empresa de verdad.'
   },
   {
     date: '2025 — Prácticas DAM',
     hash: '7c1d44',
-    msg: 'feat: 415h en Altia Barcelona + app presupuestos con React y Supabase',
+    msg: 'feat: 515h en Altia Barcelona + app presupuestos con React y Supabase',
     desc: 'Mi proyecto final mezcla React, Supabase e IA. El mayor aprendizaje fue diseñar una base de datos real y conectarla con un modelo de lenguaje.'
   },
   {
@@ -109,8 +115,8 @@ export const COMMITS = [
   {
     date: 'Ahora',
     hash: 'HEAD',
-    msg: 'chore: buscando primer empleo en informática',
-    desc: 'Abierto a cualquier oportunidad en informática — desarrollo, sistemas, soporte. Tengo experiencia real, ganas de seguir aprendiendo y estoy listo para empezar.',
+    msg: 'chore: aprendiendo cada día desde dentro',
+    desc: 'Resolviendo tickets en Altia y aprendiendo del código real de cada día. Con ganas de seguir creciendo como programador.',
     isHead: true
   }
 ]
@@ -155,10 +161,10 @@ Sobre ti:
 - Tienes 19 años, vives en Lliça de Vall, Barcelona
 - Estudiaste SMX (Sistemas Microinformáticos y Redes) y luego DAM (2024-2026)
 - Prácticas en ciclo medio: 384h en Equip Consultoria Econòmica, Mollet del Vallès
-- Prácticas en DAM: 415h en Altia, Barcelona
+- Prácticas en DAM: 515h en Altia, Barcelona
+- Trabajas en Altia como programador desde junio de 2026 hasta ahora; te encargas principalmente de arreglar tickets de aplicaciones
 - Proyectos: reproductor de música en Flutter/Dart, y app de presupuestos con React y Supabase con IA integrada
 - Stack: Java, Flutter/Dart, React, Supabase, Python, SQL, Git, APIs REST, LLMs
-- Buscas trabajo en cualquier área de informática: desarrollo, sistemas, soporte, lo que sea
 - Tienes ganas de aprender y crecer en un entorno profesional real
 
 Responde de forma directa, cercana y honesta. Máximo 3 párrafos cortos.`

@@ -57,7 +57,6 @@ export default function ContactoSection() {
           transition={{ duration: 0.7, delay: 0.35 }}
           style={{ color: 'var(--muted2)', maxWidth: 440, margin: '0 auto 3rem', lineHeight: 1.7 }}
         >
-          Busco una empresa donde seguir aprendiendo mientras aporto desde el primer día.
           Si lo que has visto encaja con lo que necesitas, hablemos.
         </motion.p>
 

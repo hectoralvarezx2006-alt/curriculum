@@ -129,11 +129,6 @@ export default function TransicionSection() {
               abrir chat con héctor →
             </button>
           </a>
-          <a href="#interactuar">
-            <button className="btn-cyber btn-cyber-green" style={{ fontSize: '0.9rem', padding: '12px 24px' }}>
-              ver más opciones ↓
-            </button>
-          </a>
         </motion.div>
       </div>
     </section>
