@@ -170,6 +170,71 @@ function HistoryPanel({ msgs }) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   MÚSICA (usa el audio global creado en main.jsx)
+══════════════════════════════════════════════════════════ */
+function MusicToggle() {
+  const [on, setOn] = useState(false)
+  const [available, setAvailable] = useState(true)
+
+  useEffect(() => {
+    const audio = window.__audio
+    if (!audio) {
+      setAvailable(false)
+      return
+    }
+    const update = () => setOn(!audio.paused)
+    update()
+    audio.addEventListener('play', update)
+    audio.addEventListener('pause', update)
+    return () => {
+      audio.removeEventListener('play', update)
+      audio.removeEventListener('pause', update)
+    }
+  }, [])
+
+  const toggle = () => {
+    const audio = window.__audio
+    if (!audio) return
+    if (audio.paused) audio.play().catch(() => {})
+    else audio.pause()
+  }
+
+  if (!available) return null
+
+  return (
+    <button
+      type="button"
+      onClick={toggle}
+      aria-pressed={on}
+      aria-label={on ? 'Pausar música' : 'Activar música'}
+      style={{
+        position: 'absolute', top: 14, left: 16, zIndex: 5,
+        height: 32, padding: '0 12px', borderRadius: 999,
+        display: 'flex', alignItems: 'center', gap: 7,
+        background: on ? 'rgba(59,130,246,0.16)' : 'rgba(12,22,48,0.5)',
+        border: `1px solid ${on ? T.line : T.lineSoft}`,
+        color: on ? T.ice : T.muted,
+        fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em',
+        cursor: 'none', transition: 'all .2s',
+      }}
+    >
+      <svg width="14" height="14" viewBox="0 0 16 16" fill="none" aria-hidden="true">
+        <path d="M2 6h2.5L8 3v10L4.5 10H2z" fill="currentColor" />
+        {on ? (
+          <>
+            <path d="M10.5 5.5a3.5 3.5 0 0 1 0 5" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+            <path d="M12.5 3.5a6.5 6.5 0 0 1 0 9" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+          </>
+        ) : (
+          <path d="M10.5 6l4 4m0-4l-4 4" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round" />
+        )}
+      </svg>
+      MÚSICA {on ? 'ON' : 'OFF'}
+    </button>
+  )
+}
+
+/* ══════════════════════════════════════════════════════════
    PÁGINA
 ══════════════════════════════════════════════════════════ */
 export default function ChatPage() {
@@ -348,6 +413,9 @@ export default function ChatPage() {
           WebkitMaskImage: 'radial-gradient(ellipse 75% 70% at 50% 45%, #000 25%, transparent 80%)',
           maskImage: 'radial-gradient(ellipse 75% 70% at 50% 45%, #000 25%, transparent 80%)',
         }} />
+
+        {/* Música (arriba a la izquierda) */}
+        <MusicToggle />
 
         {/* Botón historial (arriba a la derecha) */}
         <button
