@@ -174,6 +174,7 @@ let speakTimer = null
 
 function speak(text) {
   if (!synth || !text) return
+  console.log('[voz] voces disponibles:', synth.getVoices().length)
   clearTimeout(speakTimer)
   synth.cancel()
   const clean = text.replace(/https?:\/\/\S+/g, '').replace(/[*_`#>]/g, '').trim()
@@ -190,6 +191,7 @@ function speak(text) {
       if (voice) u.voice = voice
       u.rate = 1.05
       u.volume = 1
+      if (i === 0) u.onstart = () => console.log('[voz] hablando con:', voice?.name || 'voz por defecto')
       u.onerror = (e) => {
         console.warn('[voz] error:', e.error)
         if (i === chunks.length - 1 || e.error === 'not-allowed') duckMusic(false)
@@ -436,6 +438,12 @@ export default function ChatPage() {
   const send = async (text) => {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
+    // Desbloquea la voz dentro del gesto del usuario (si no, el navegador puede silenciarla tras el fetch)
+    if (synth && voiceOn) {
+      const unlock = new SpeechSynthesisUtterance(' ')
+      unlock.volume = 0
+      synth.speak(unlock)
+    }
     setInput('')
     setMenuOpen(false)
     setLastQ(msg)
