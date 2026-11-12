@@ -163,28 +163,43 @@ function pickVoice() {
 }
 
 function stopSpeaking() {
+  clearTimeout(speakTimer)
   if (synth) synth.cancel()
   duckMusic(false)
 }
 
+// Chrome puede descartar utterances sin referencia (nunca suenan): las guardamos aquí
+const liveUtterances = []
+let speakTimer = null
+
 function speak(text) {
   if (!synth || !text) return
+  clearTimeout(speakTimer)
   synth.cancel()
   const clean = text.replace(/https?:\/\/\S+/g, '').replace(/[*_`#>]/g, '').trim()
+  if (!clean) return
   const chunks = clean.match(/[^.!?\n]+[.!?]*/g)?.map((s) => s.trim()).filter(Boolean) || [clean]
-  const voice = pickVoice()
-  duckMusic(true)
-  chunks.forEach((chunk, i) => {
-    const u = new SpeechSynthesisUtterance(chunk)
-    u.lang = voice?.lang || 'es-ES'
-    if (voice) u.voice = voice
-    u.rate = 1.05
-    if (i === chunks.length - 1) {
-      u.onend = () => duckMusic(false)
-      u.onerror = () => duckMusic(false)
-    }
-    synth.speak(u)
-  })
+  // Chrome ignora un speak() lanzado justo después de cancel(): se espera un instante
+  speakTimer = setTimeout(() => {
+    const voice = pickVoice()
+    liveUtterances.length = 0
+    duckMusic(true)
+    chunks.forEach((chunk, i) => {
+      const u = new SpeechSynthesisUtterance(chunk)
+      u.lang = voice?.lang || 'es-ES'
+      if (voice) u.voice = voice
+      u.rate = 1.05
+      u.volume = 1
+      u.onerror = (e) => {
+        console.warn('[voz] error:', e.error)
+        if (i === chunks.length - 1 || e.error === 'not-allowed') duckMusic(false)
+      }
+      if (i === chunks.length - 1) u.onend = () => duckMusic(false)
+      liveUtterances.push(u)
+      synth.speak(u)
+    })
+    synth.resume()
+  }, 120)
 }
 
 /* ══════════════════════════════════════════════════════════
