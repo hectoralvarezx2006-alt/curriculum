@@ -171,12 +171,15 @@ function stopSpeaking() {
 // Chrome puede descartar utterances sin referencia (nunca suenan): las guardamos aquí
 const liveUtterances = []
 let speakTimer = null
+let unlocking = false
 
 function speak(text) {
   if (!synth || !text) return
   console.log('[voz] voces disponibles:', synth.getVoices().length)
   clearTimeout(speakTimer)
-  synth.cancel()
+  // En móvil, cancel() sin nada hablando puede dejar el motor mudo: solo se cancela si hace falta
+  const needCancel = synth.speaking && !unlocking
+  if (needCancel) synth.cancel()
   const clean = text.replace(/https?:\/\/\S+/g, '').replace(/[*_`#>]/g, '').trim()
   if (!clean) return
   const chunks = clean.match(/[^.!?\n]+[.!?]*/g)?.map((s) => s.trim()).filter(Boolean) || [clean]
@@ -201,7 +204,7 @@ function speak(text) {
       synth.speak(u)
     })
     synth.resume()
-  }, 120)
+  }, needCancel ? 120 : 0)
 }
 
 /* ══════════════════════════════════════════════════════════
@@ -440,8 +443,11 @@ export default function ChatPage() {
     if (!msg || loading) return
     // Desbloquea la voz dentro del gesto del usuario (si no, el navegador puede silenciarla tras el fetch)
     if (synth && voiceOn) {
-      const unlock = new SpeechSynthesisUtterance(' ')
-      unlock.volume = 0
+      const unlock = new SpeechSynthesisUtterance('.')
+      unlock.lang = 'es-ES'
+      unlock.volume = 0.01
+      unlocking = true
+      unlock.onend = unlock.onerror = () => { unlocking = false }
       synth.speak(unlock)
     }
     setInput('')
