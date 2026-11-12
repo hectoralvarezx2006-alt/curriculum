@@ -117,6 +117,77 @@ function useTypewriter(text, id, cps = 45) {
 }
 
 /* ══════════════════════════════════════════════════════════
+   VOZ (síntesis del navegador) + bajar la música mientras habla
+══════════════════════════════════════════════════════════ */
+const synth = typeof window !== 'undefined' ? window.speechSynthesis : null
+const DUCK_VOL = 0.04
+let duckFade = null
+let duckBase = null
+
+function fadeMusicTo(target) {
+  const audio = window.__audio
+  if (!audio) return
+  clearInterval(duckFade)
+  duckFade = setInterval(() => {
+    const d = target - audio.volume
+    if (Math.abs(d) < 0.01) {
+      audio.volume = target
+      clearInterval(duckFade)
+      return
+    }
+    audio.volume = Math.min(1, Math.max(0, audio.volume + Math.sign(d) * 0.01))
+  }, 30)
+}
+
+function duckMusic(on) {
+  const audio = window.__audio
+  if (!audio) return
+  if (on) {
+    if (duckBase === null) duckBase = audio.volume
+    if (!audio.paused) fadeMusicTo(Math.min(DUCK_VOL, duckBase))
+  } else if (duckBase !== null) {
+    const base = duckBase
+    duckBase = null
+    fadeMusicTo(base)
+  }
+}
+
+function pickVoice() {
+  const voices = synth?.getVoices() || []
+  return (
+    voices.find((v) => /^es[-_]ES/i.test(v.lang) && /natural|online|google/i.test(v.name)) ||
+    voices.find((v) => /^es[-_]ES/i.test(v.lang)) ||
+    voices.find((v) => /^es/i.test(v.lang)) ||
+    null
+  )
+}
+
+function stopSpeaking() {
+  if (synth) synth.cancel()
+  duckMusic(false)
+}
+
+function speak(text) {
+  if (!synth || !text) return
+  synth.cancel()
+  const clean = text.replace(/https?:\/\/\S+/g, '').replace(/[*_`#>]/g, '').trim()
+  const chunks = clean.match(/[^.!?\n]+[.!?]*/g)?.map((s) => s.trim()).filter(Boolean) || [clean]
+  const voice = pickVoice()
+  duckMusic(true)
+  chunks.forEach((chunk, i) => {
+    const u = new SpeechSynthesisUtterance(chunk)
+    u.lang = voice?.lang || 'es-ES'
+    if (voice) u.voice = voice
+    u.rate = 1.05
+    if (i === chunks.length - 1) {
+      u.onend = () => duckMusic(false)
+      u.onerror = () => duckMusic(false)
+    }
+    synth.speak(u)
+  })
+}
+
+/* ══════════════════════════════════════════════════════════
    PANELES (historial)
 ══════════════════════════════════════════════════════════ */
 function HistoryPanel({ msgs }) {
@@ -226,8 +297,20 @@ export default function ChatPage() {
   const replyRef = useRef(null)
   const menuRef  = useRef(null)
 
-  const { shown, typing, skip } = useTypewriter(reply.text, reply.id)
+  const [voiceOn, setVoiceOn] = useState(true)
+  const { shown, typing, skip: skipTyping } = useTypewriter(reply.text, reply.id, voiceOn && synth ? 15 : 45)
+  const skip = useCallback(() => { skipTyping(); stopSpeaking() }, [skipTyping])
   const speaking = typing && !loading
+
+  // Habla cada respuesta nueva (la del saludo no: el navegador bloquea audio sin interacción)
+  useEffect(() => {
+    if (reply.id === 0 || !voiceOn) return
+    speak(reply.text)
+  }, [reply.id]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Al apagar la voz o salir de la página, se calla y devuelve la música
+  useEffect(() => { if (!voiceOn) stopSpeaking() }, [voiceOn])
+  useEffect(() => () => stopSpeaking(), [])
   const hasText  = input.trim().length > 0
   const isTouch  = typeof window !== 'undefined' && 'ontouchstart' in window
 
@@ -250,7 +333,7 @@ export default function ChatPage() {
 
   const startListening = () => {
     if (!SpeechRec || loading || recRef.current) return
-    if (typing) skip()
+    skip()
     setMicMsg('')
     const rec = new SpeechRec()
     rec.lang = 'es-ES'
@@ -484,6 +567,27 @@ export default function ChatPage() {
 
         {/* Música (arriba a la izquierda) */}
         <MusicToggle />
+
+        {/* Voz del asistente (junto al botón de música) */}
+        {synth && (
+          <button
+            type="button"
+            onClick={() => setVoiceOn((v) => !v)}
+            aria-pressed={voiceOn}
+            aria-label={voiceOn ? 'Desactivar voz del asistente' : 'Activar voz del asistente'}
+            style={{
+              position: 'absolute', top: 14, left: 168, zIndex: 5,
+              height: 32, padding: '0 12px', borderRadius: 999,
+              background: voiceOn ? 'rgba(59,130,246,0.16)' : 'rgba(12,22,48,0.5)',
+              border: `1px solid ${voiceOn ? T.line : T.lineSoft}`,
+              color: voiceOn ? T.ice : T.muted,
+              fontFamily: MONO, fontSize: 10, letterSpacing: '0.1em',
+              cursor: 'none', transition: 'all .2s',
+            }}
+          >
+            VOZ {voiceOn ? 'ON' : 'OFF'}
+          </button>
+        )}
 
         {/* Botón historial (arriba a la derecha) */}
         <button
