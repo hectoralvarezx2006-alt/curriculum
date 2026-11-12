@@ -139,9 +139,19 @@ function fadeMusicTo(target) {
   }, 30)
 }
 
+const isIOS = typeof navigator !== 'undefined' &&
+  (/iP(hone|ad|od)/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1))
+let pausedForVoice = false
+
 function duckMusic(on) {
   const audio = window.__audio
   if (!audio) return
+  // iOS ignora audio.volume: ahí la música se pausa mientras habla y se reanuda después
+  if (isIOS) {
+    if (on && !audio.paused) { pausedForVoice = true; audio.pause() }
+    else if (!on && pausedForVoice) { pausedForVoice = false; audio.play().catch(() => {}) }
+    return
+  }
   if (on) {
     if (duckBase === null) duckBase = audio.volume
     if (!audio.paused) fadeMusicTo(Math.min(DUCK_VOL, duckBase))
@@ -162,8 +172,80 @@ function pickVoice() {
   )
 }
 
+/* Móvil: la síntesis del navegador es poco fiable, así que se usa voz de Gemini TTS
+   reproducida con un <audio> desbloqueado en el gesto del usuario. */
+const isTouchDevice = typeof window !== 'undefined' && ('ontouchstart' in window || navigator.maxTouchPoints > 0)
+const useCloudTTS = isTouchDevice
+const SILENT_WAV = 'data:audio/wav;base64,UklGRiQAAABXQVZFZm10IBAAAAABAAEAQB8AAEAfAAABAAgAZGF0YQAAAAA='
+let ttsAudio = null
+let pendingTTS = null
+
+function unlockTTS() {
+  if (!ttsAudio) ttsAudio = new Audio()
+  ttsAudio.src = SILENT_WAV
+  ttsAudio.play().catch(() => {})
+}
+
+function pcmToWavUrl(base64, rate = 24000) {
+  const bin = atob(base64)
+  const pcm = new Uint8Array(bin.length)
+  for (let i = 0; i < bin.length; i++) pcm[i] = bin.charCodeAt(i)
+  const buf = new ArrayBuffer(44 + pcm.length)
+  const v = new DataView(buf)
+  const w = (o, str) => { for (let i = 0; i < str.length; i++) v.setUint8(o + i, str.charCodeAt(i)) }
+  w(0, 'RIFF'); v.setUint32(4, 36 + pcm.length, true); w(8, 'WAVE'); w(12, 'fmt ')
+  v.setUint32(16, 16, true); v.setUint16(20, 1, true); v.setUint16(22, 1, true)
+  v.setUint32(24, rate, true); v.setUint32(28, rate * 2, true); v.setUint16(32, 2, true); v.setUint16(34, 16, true)
+  w(36, 'data'); v.setUint32(40, pcm.length, true)
+  new Uint8Array(buf, 44).set(pcm)
+  return URL.createObjectURL(new Blob([buf], { type: 'audio/wav' }))
+}
+
+async function fetchTTS(text, apiKey) {
+  const clean = text.replace(/https?:\/\/\S+/g, '').replace(/[*_`#>]/g, '').trim()
+  if (!clean) return null
+  const ctrl = new AbortController()
+  const t = setTimeout(() => ctrl.abort(), 12000)
+  try {
+    const res = await fetch(
+      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-tts:generateContent?key=${apiKey}`,
+      {
+        method: 'POST', signal: ctrl.signal,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{ parts: [{ text: clean }] }],
+          generationConfig: {
+            responseModalities: ['AUDIO'],
+            speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: 'Kore' } } },
+          },
+        }),
+      },
+    )
+    const data = await res.json()
+    const part = data.candidates?.[0]?.content?.parts?.find((p) => p.inlineData)
+    if (!part) return null
+    const rate = Number(/rate=(\d+)/.exec(part.inlineData.mimeType || '')?.[1]) || 24000
+    return pcmToWavUrl(part.inlineData.data, rate)
+  } catch (e) {
+    console.warn('[voz] TTS falló:', e?.message)
+    return null
+  } finally {
+    clearTimeout(t)
+  }
+}
+
+function playTTS(url) {
+  if (!ttsAudio) ttsAudio = new Audio()
+  ttsAudio.onended = ttsAudio.onerror = () => { duckMusic(false); URL.revokeObjectURL(url) }
+  ttsAudio.src = url
+  duckMusic(true)
+  ttsAudio.play().catch((e) => { console.warn('[voz] play falló:', e?.message); duckMusic(false) })
+}
+
 function stopSpeaking() {
   clearTimeout(speakTimer)
+  if (ttsAudio) { ttsAudio.onended = ttsAudio.onerror = null; ttsAudio.pause() }
+  pendingTTS = null
   if (synth) synth.cancel()
   duckMusic(false)
 }
@@ -318,14 +400,20 @@ export default function ChatPage() {
   const menuRef  = useRef(null)
 
   const [voiceOn, setVoiceOn] = useState(true)
-  const { shown, typing, skip: skipTyping } = useTypewriter(reply.text, reply.id, voiceOn && synth ? 15 : 45)
+  const { shown, typing, skip: skipTyping } = useTypewriter(reply.text, reply.id, voiceOn && (synth || useCloudTTS) ? 15 : 45)
   const skip = useCallback(() => { skipTyping(); stopSpeaking() }, [skipTyping])
   const speaking = typing && !loading
 
   // Habla cada respuesta nueva (la del saludo no: el navegador bloquea audio sin interacción)
   useEffect(() => {
     if (reply.id === 0 || !voiceOn) return
-    speak(reply.text)
+    if (pendingTTS) {
+      const url = pendingTTS
+      pendingTTS = null
+      playTTS(url)
+    } else {
+      speak(reply.text)
+    }
   }, [reply.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // Al apagar la voz o salir de la página, se calla y devuelve la música
@@ -442,7 +530,8 @@ export default function ChatPage() {
     const msg = (text ?? input).trim()
     if (!msg || loading) return
     // Desbloquea la voz dentro del gesto del usuario (si no, el navegador puede silenciarla tras el fetch)
-    if (synth && voiceOn) {
+    if (voiceOn && useCloudTTS) unlockTTS()
+    else if (synth && voiceOn) {
       const unlock = new SpeechSynthesisUtterance('.')
       unlock.lang = 'es-ES'
       unlock.volume = 0.01
@@ -504,6 +593,12 @@ export default function ChatPage() {
       }
     } catch {
       answer = 'Error de conexión. Prueba de nuevo.'
+    }
+
+    // Móvil: se pide el audio antes de mostrar la respuesta para que texto y voz arranquen juntos
+    pendingTTS = null
+    if (voiceOn && useCloudTTS && !answer.startsWith('⚠️') && !answer.startsWith('Error')) {
+      pendingTTS = await fetchTTS(answer, import.meta.env.VITE_GEMINI_API_KEY)
     }
 
     setMsgs((prev) => [...prev, { role: 'bot', text: answer }])
